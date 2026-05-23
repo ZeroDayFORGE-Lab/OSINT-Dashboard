@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSINT Arsenal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0d1117;
+    --card: #111820;
+    --border: #1e3040;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #39ff14;
+    --text: #c9d8e8;
+    --text-dim: #5a7a90;
+    --text-bright: #e8f4ff;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+    --glow2: 0 0 20px rgba(57,255,20,0.2);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,212,255,0.015) 2px,
+      rgba(0,212,255,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* Grid background */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; }
+
+  /* Header */
+  header {
+    padding: 2rem 2rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,212,255,0.05) 0%, transparent 100%);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .logo {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.6rem;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+  .logo span { color: var(--accent2); }
+  .tagline {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .stats-bar {
+    margin-left: auto;
+    display: flex;
+    gap: 1.5rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+  .stat { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+  .stat-num { font-size: 1.1rem; color: var(--accent3); text-shadow: var(--glow2); }
+
+  /* Search & Filter */
+  .controls {
+    max-width: 1400px;
+    margin: 1.5rem auto;
+    padding: 0 2rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 240px;
+  }
+  .search-wrap::before {
+    content: '⌕';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    font-size: 1.1rem;
+    pointer-events: none;
+  }
+  input[type="text"] {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text-bright);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    border-radius: 2px;
+  }
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+  .filter-btns {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    border-radius: 2px;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: var(--glow);
+    background: rgba(0,212,255,0.07);
+  }
+
+  /* Main grid */
+  main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem 4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.2rem;
+  }
+
+  /* Category card */
+  .category {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    transition: border-color 0.2s, transform 0.2s;
+    animation: fadeUp 0.4s ease both;
+  }
+  .category:nth-child(even) { border-top-color: var(--accent2); }
+  .category:nth-child(3n) { border-top-color: var(--accent3); }
+  .category:hover {
+    border-color: rgba(0,212,255,0.4);
+    transform: translateY(-2px);
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .cat-header {
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .cat-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-bright);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .cat-icon { font-size: 0.9rem; }
+  .cat-count {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    background: var(--surface);
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--border);
+  }
+  .cat-toggle { color: var(--text-dim); font-size: 0.7rem; transition: transform 0.2s; }
+  .category.collapsed .cat-toggle { transform: rotate(-90deg); }
+
+  .cat-body { padding: 0.5rem 0; }
+  .category.collapsed .cat-body { display: none; }
+
+  /* Subcategory */
+  .subcat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    padding: 0.6rem 1rem 0.25rem;
+    opacity: 0.7;
+  }
+
+  /* Tool link */
+  .tool-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 1rem;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.82rem;
+    transition: background 0.15s, color 0.15s, padding-left 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .tool-link:hover {
+    background: rgba(0,212,255,0.06);
+    color: var(--accent);
+    padding-left: 1.3rem;
+    border-left-color: var(--accent);
+  }
+  .tool-link .dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .tool-link:hover .dot { background: var(--accent); }
+  .tool-link .badge {
+    margin-left: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    padding: 0.1rem 0.35rem;
+    border: 1px solid;
+    border-radius: 1px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .badge.new { color: var(--accent3); border-color: var(--accent3); }
+  .badge.free { color: #aaa; border-color: #333; }
+
+  /* hidden by search */
+  .tool-link.hidden { display: none; }
+  .category.all-hidden { display: none; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    border-top: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+<header>
+  <div class="header-inner">
+    <div>
+      <div class="logo">OSINT <span>//</span> ARSENAL</div>
+      <div class="tagline">Open Source Intelligence Toolkit</div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat"><span class="stat-num" id="total-count">0</span>TOOLS</div>
+      <div class="stat"><span class="stat-num" id="cat-count">0</span>CATEGORIES</div>
+      <div class="stat"><span class="stat-num" id="new-count">0</span>NEW</div>
+    </div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="search-wrap">
+    <input type="text" id="search" placeholder="Search tools..." autocomplete="off">
+  </div>
+  <div class="filter-btns" id="filter-btns">
+    <button class="filter-btn active" data-filter="all">ALL</button>
+    <button class="filter-btn" data-filter="company">COMPANY</button>
+    <button class="filter-btn" data-filter="dns">DNS / NET</button>
+    <button class="filter-btn" data-filter="email">EMAIL</button>
+    <button class="filter-btn" data-filter="phone">PHONE</button>
+    <button class="filter-btn" data-filter="people">PEOPLE</button>
+    <button class="filter-btn" data-filter="image">IMAGE</button>
+    <button class="filter-btn" data-filter="social">SOCIAL</button>
+    <button class="filter-btn" data-filter="darkweb">DARK WEB</button>
+    <button class="filter-btn" data-filter="geoint">GEOINT</button>
+    <button class="filter-btn" data-filter="threat">THREAT INTEL</button>
+  </div>
+</div>
+
+<main id="main"></main>
+
+<footer>[ OSINT ARSENAL v2.0 ] — FOR AUTHORIZED RESEARCH ONLY — USE RESPONSIBLY</footer>
+</div>
+
+<script>
+const DATA = [
+  // ── COMPANY ──────────────────────────────────────────────
+  {
+    id: 'company', title: 'Company Intelligence', icon: '🏢', filter: 'company',
+    tools: [
+      { name: 'Crunchbase', url: 'https://www.crunchbase.com/' },
+      { name: 'OpenCorporates', url: 'https://opencorporates.com/' },
+      { name: 'LinkedIn', url: 'https://www.linkedin.com/' },
+      { name: 'Glassdoor', url: 'https://www.glassdoor.com/' },
+      { name: 'Owler', url: 'https://www.owler.com/' },
+      { name: 'Guidestar', url: 'http://www.guidestar.org/' },
+      { name: 'Morningstar Research', url: 'http://library.morningstar.com/' },
+      { name: 'Orbis Directory', url: 'http://orbisdirectory.bvdinfo.com/version-20161014/OrbisDirectory/Companies' },
+      { name: 'Serpstat', url: 'https://serpstat.com/' },
+      { name: 'SpyFu', url: 'http://www.spyfu.com/' },
+      { name: 'Accuranker', url: 'https://www.accuranker.com/' },
+      { name: 'Europages', url: 'http://www.europages.co.uk/' },
+      { name: 'Marketvisual', url: 'http://www.marketvisual.com/' },
+      { name: 'Canadian Business Research', url: 'https://www.canada.ca/en/services/business/research.html', sub: 'Country Specific' },
+      { name: 'Overseas Company Records', url: 'https://www.gov.uk/government/publications/overseas-registries/overseas-registries', sub: 'Country Specific' },
+      { name: 'Wikipedia National Company Registers', url: 'https://en.wikipedia.org/wiki/List_of_company_registers', sub: 'Country Specific' },
+      // NEW
+      { name: 'EDGAR (SEC Filings)', url: 'https://www.sec.gov/cgi-bin/browse-edgar', badge: 'new' },
+      { name: 'Companies House UK', url: 'https://find-and-update.company-information.service.gov.uk/', badge: 'new' },
+      { name: 'Dun & Bradstreet', url: 'https://www.dnb.com/', badge: 'new' },
+      { name: 'OCCRP Aleph', url: 'https://aleph.occrp.org/', badge: 'new' },
+      { name: 'Offshore Leaks DB', url: 'https://offshoreleaks.icij.org/', badge: 'new' },
+      { name: 'Sayari Graph', url: 'https://sayari.com/', badge: 'new' },
+      { name: 'BusinessSearch CA', url: 'https://businesssearch.sos.ca.gov/', badge: 'new' },
+    ]
+  },
+
+  // ── DNS / NETWORK ─────────────────────────────────────────
+  {
+    id: 'dns', title: 'DNS & Network Recon', icon: '🌐', filter: 'dns',
+    tools: [
+      { name: 'DNS Dumpster', url: 'https://dnsdumpster.com/' },
+      { name: 'MX Toolbox', url: 'https://mxtoolbox.com/' },
+      { name: 'View DNS', url: 'http://viewdns.info/' },
+      { name: 'Shodan', url: 'https://shodan.io/' },
+      { name: 'Censys', url: 'https://search.censys.io/', badge: 'new' },
+      { name: 'FOFA', url: 'https://fofa.info/', badge: 'new' },
+      { name: 'ZoomEye', url: 'https://www.zoomeye.org/', badge: 'new' },
+      { name: 'Netcraft Site Report', url: 'https://sitereport.netcraft.com/' },
+      { name: 'Robtex', url: 'https://www.robtex.com/' },
+      { name: 'SecurityTrails DNS Trails', url: 'https://securitytrails.com/dns-trails' },
+      { name: 'Intelx.io', url: 'https://intelx.io/' },
+      { name: 'Greynoise', url: 'http://greynoise.io/' },
+      { name: 'Builtwith', url: 'http://builtwith.com/' },
+      { name: 'Whoisology', url: 'https://whoisology.com/', sub: 'Whois' },
+      { name: 'Who Is Hosting This', url: 'http://www.whoishostingthis.com/', sub: 'Whois' },
+      { name: 'WaybackMachine', url: 'http://archive.org/' },
+      { name: 'ExoneraTor', url: 'https://exonerator.torproject.org/' },
+      { name: 'Spyse', url: 'https://spyse.com/' },
+      { name: 'IP Fingerprints', url: 'http://www.ipfingerprints.com/' },
+      { name: 'Website Informer', url: 'http://website.informer.com/' },
+      { name: 'TCPIP Utils', url: 'http://www.tcpiputils.com/' },
+      // NEW
+      { name: 'CIRCL Passive DNS', url: 'https://www.circl.lu/services/passive-dns/', badge: 'new' },
+      { name: 'Hurricane Electric BGP Toolkit', url: 'https://bgp.he.net/', badge: 'new' },
+      { name: 'Shodan Favicon Hash Search', url: 'https://www.shodan.io/search?query=http.favicon.hash', badge: 'new' },
+      { name: 'RiskIQ Community', url: 'https://community.riskiq.com/', badge: 'new' },
+      { name: 'VirusTotal', url: 'https://www.virustotal.com/', badge: 'new' },
+      { name: 'URLScan.io', url: 'https://urlscan.io/', badge: 'new' },
+      { name: 'IPinfo', url: 'https://ipinfo.io/', badge: 'new' },
+      { name: 'ASN Lookup', url: 'https://asnlookup.com/', badge: 'new' },
+      { name: 'Wappalyzer', url: 'https://www.wappalyzer.com/', badge: 'new' },
+    ]
+  },
+
+  // ── EMAIL ─────────────────────────────────────────────────
+  {
+    id: 'email', title: 'Email Intelligence', icon: '✉️', filter: 'email',
+    tools: [
+      { name: 'Hunter.io', url: 'https://hunter.io/' },
+      { name: 'Dehashed', url: 'https://dehashed.com/' },
+      { name: 'Have I Been Pwned', url: 'https://haveibeenpwned.com/' },
+      { name: 'Pipl', url: 'https://pipl.com/' },
+      { name: 'EmailHippo', url: 'https://tools.verifyemailaddress.io/' },
+      { name: 'Voilanorbert', url: 'https://www.voilanorbert.com/' },
+      { name: 'Toofr', url: 'https://www.toofr.com/' },
+      { name: 'Verify Email', url: 'http://verify-email.org/' },
+      { name: 'Thats Them (Reverse Email)', url: 'https://thatsthem.com/reverse-email-lookup' },
+      // NEW
+      { name: 'Epieos', url: 'https://epieos.com/', badge: 'new' },
+      { name: 'GHunt (Google Account)', url: 'https://github.com/mxrch/GHunt', badge: 'new' },
+      { name: 'IntelX Email Search', url: 'https://intelx.io/', badge: 'new' },
+      { name: 'BreachDirectory', url: 'https://breachdirectory.org/', badge: 'new' },
+      { name: 'LeakCheck', url: 'https://leakcheck.io/', badge: 'new' },
+      { name: 'Holehe', url: 'https://github.com/megadose/holehe', badge: 'new' },
+    ]
+  },
+
+  // ── PHONE ─────────────────────────────────────────────────
+  {
+    id: 'phone', title: 'Phone Number Lookup', icon: '📞', filter: 'phone',
+    tools: [
+      { name: 'Free Carrier Lookup', url: 'http://freecarrierlookup.com/' },
+      { name: 'National Cellular Directory', url: 'https://www.nationalcellulardirectory.com/' },
+      { name: 'Phone Validator', url: 'https://www.phonevalidator.com/index.aspx' },
+      { name: 'Reverse Phone Lookup', url: 'http://www.reversephonelookup.com/' },
+      { name: 'Spy Dialer', url: 'http://spydialer.com/' },
+      { name: 'Twilio Lookup', url: 'https://www.twilio.com/lookup' },
+      { name: 'OpenCNAM', url: 'http://opencnam.com/' },
+      // NEW
+      { name: 'PhoneInfoga', url: 'https://github.com/sundowndev/phoneinfoga', badge: 'new' },
+      { name: 'NumVerify', url: 'https://numverify.com/', badge: 'new' },
+      { name: 'True Caller (Search)', url: 'https://www.truecaller.com/search/', badge: 'new' },
+      { name: 'CallerID Test', url: 'https://www.calleridtest.com/', badge: 'new' },
+    ]
+  },
+
+  // ── PEOPLE ────────────────────────────────────────────────
+  {
+    id: 'people', title: 'People Search', icon: '👤', filter: 'people',
+    tools: [
+      { name: 'Pipl', url: 'https://pipl.com/' },
+      { name: 'PeekYou', url: 'http://www.peekyou.com/' },
+      { name: 'Rocket Reach', url: 'http://rocketreach.co/' },
+      { name: 'LittleSis', url: 'https://littlesis.org/' },
+      { name: 'Ancestry', url: 'http://www.ancestry.com/' },
+      { name: 'Family Search', url: 'https://familysearch.org/' },
+      { name: 'Family Tree Now', url: 'http://www.familytreenow.com/' },
+      { name: 'Infobel', url: 'http://www.infobel.com/en/world' },
+      { name: 'Homemetry', url: 'https://homemetry.com/' },
+      { name: 'Alumni.net', url: 'http://www.alumni.net/' },
+      { name: 'Classmates', url: 'http://www.classmates.com/' },
+      { name: 'Lullar', url: 'http://com.lullar.com/' },
+      { name: 'Recruitin', url: 'http://recruitin.net/' },
+      { name: 'Itools People Search', url: 'http://itools.com/search/people-search' },
+      { name: 'Facesearch', url: 'http://facesaerch.com/' },
+      { name: 'Faxvin', url: 'http://faxvin.com/' },
+      // NEW
+      { name: 'That\'s Them', url: 'https://thatsthem.com/', badge: 'new' },
+      { name: 'Spokeo', url: 'https://www.spokeo.com/', badge: 'new' },
+      { name: 'FastPeopleSearch', url: 'https://www.fastpeoplesearch.com/', badge: 'new' },
+      { name: 'ClustrMaps', url: 'https://clustrmaps.com/', badge: 'new' },
+      { name: 'WebMii', url: 'https://webmii.com/', badge: 'new' },
+    ]
+  },
+
+  // ── USERNAME CHECK ────────────────────────────────────────
+  {
+    id: 'username', title: 'Username & Identity', icon: '🆔', filter: 'social',
+    tools: [
+      { name: 'WhatsMyName', url: 'https://whatsmyname.app/' },
+      { name: 'Namecheckup', url: 'https://namecheckup.com/' },
+      { name: 'Check User Names', url: 'http://www.checkusernames.com/' },
+      { name: 'Knowem', url: 'http://www.knowem.com/' },
+      { name: 'Name Chk', url: 'http://www.namechk.com/' },
+      { name: 'Name Checkr', url: 'http://www.namecheckr.com/' },
+      { name: 'User Search', url: 'http://www.usersearch.org/' },
+      // NEW
+      { name: 'Sherlock', url: 'https://github.com/sherlock-project/sherlock', badge: 'new' },
+      { name: 'Maigret', url: 'https://github.com/soxoj/maigret', badge: 'new' },
+      { name: 'Social Finder', url: 'https://socialfinder.app/', badge: 'new' },
+    ]
+  },
+
+  // ── SOCIAL MEDIA ─────────────────────────────────────────
+  {
+    id: 'social-platforms', title: 'Social Networks', icon: '💬', filter: 'social',
+    tools: [
+      { name: 'Facebook', url: 'http://www.facebook.com/' },
+      { name: 'Instagram', url: 'https://www.instagram.com/' },
+      { name: 'LinkedIn', url: 'https://www.linkedin.com/' },
+      { name: 'Twitter / X', url: 'https://twitter.com/' },
+      { name: 'Reddit', url: 'https://www.reddit.com/' },
+      { name: 'Pinterest', url: 'http://www.pinterest.com/' },
+      { name: 'Tumblr', url: 'https://www.tumblr.com/' },
+      { name: 'Weibo China', url: 'http://weibo.com/' },
+      { name: 'QQ', url: 'http://qzone.qq.com/' },
+      { name: 'Odnoklassniki', url: 'http://ok.ru/' },
+      { name: 'Mixi', url: 'https://mixi.jp/' },
+      { name: 'Tinder', url: 'https://www.gotinder.com/' },
+      // NEW
+      { name: 'Telegram', url: 'https://t.me/', badge: 'new' },
+      { name: 'Discord Lookup', url: 'https://discord.id/', badge: 'new' },
+      { name: 'Mastodon Search', url: 'https://mastodon.social/explore', badge: 'new' },
+      { name: 'TikTok', url: 'https://www.tiktok.com/', badge: 'new' },
+      { name: 'Bluesky', url: 'https://bsky.app/', badge: 'new' },
+      { name: 'VK', url: 'http://vk.com/' },
+    ]
+  },
+
+  // ── SOCIAL MEDIA TOOLS ────────────────────────────────────
+  {
+    id: 'social-tools', title: 'Social Media Analysis', icon: '📊', filter: 'social',
+    tools: [
+      { name: 'Social Blade', url: 'https://socialblade.com/' },
+      { name: 'Social Searcher', url: 'https://www.social-searcher.com/' },
+      { name: 'Glass Door', url: 'https://www.glassdoor.co.in/Reviews/index.htm' },
+      { name: 'Backtweets', url: 'http://backtweets.com/', sub: 'Twitter / X' },
+      { name: 'Twitter Search', url: 'http://search.twitter.com/', sub: 'Twitter / X' },
+      { name: 'Tinfoleak', url: 'https://tinfoleak.com/', sub: 'Twitter / X' },
+      { name: 'Facebook Search', url: 'http://search.fb.com/', sub: 'Facebook' },
+      { name: 'Find my Facebook ID', url: 'https://findmyfbid.in/', sub: 'Facebook' },
+      { name: 'Lookup-ID.com', url: 'https://lookup-id.com/', sub: 'Facebook' },
+      { name: 'Picodash', url: 'https://www.picodash.com/', sub: 'Instagram' },
+      { name: 'Social Rank', url: 'https://www.socialrank.com/', sub: 'Instagram' },
+      { name: 'Hashtagify', url: 'http://hashtagify.me/', sub: 'Instagram' },
+      { name: 'VK App', url: 'http://vk.com/app3046467', sub: 'VK' },
+      // NEW
+      { name: 'Telegram OSINT Bot', url: 'https://github.com/alfredredbird/ted', badge: 'new' },
+      { name: 'TweetBeaver', url: 'https://tweetbeaver.com/', badge: 'new' },
+      { name: 'Reddit Investigator', url: 'https://www.redditinvestigator.com/', badge: 'new' },
+      { name: 'Instagram OSINT Tool', url: 'https://github.com/sc1341/InstagramOSINT', badge: 'new' },
+      { name: 'Telegago (Telegram Search)', url: 'https://cse.google.com/cse?cx=006368593537057042503:efxu7xprihg', badge: 'new' },
+    ]
+  },
+
+  // ── IMAGE OSINT ───────────────────────────────────────────
+  {
+    id: 'image', title: 'Image & Face Search', icon: '🖼️', filter: 'image',
+    tools: [
+      { name: 'TinEye', url: 'https://tineye.com/' },
+      { name: 'Google Images', url: 'https://images.google.com/' },
+      { name: 'Yandex Images', url: 'https://www.yandex.com/images' },
+      { name: 'Pimeyes', url: 'https://pimeyes.com/' },
+      { name: 'FotoForensics', url: 'http://www.fotoforensics.com/' },
+      { name: 'Flickr', url: 'https://secure.flickr.com/' },
+      { name: 'Picsearch', url: 'http://www.picsearch.com/' },
+      { name: 'Image Identify', url: 'https://www.imageidentify.com/' },
+      { name: 'KarmaDecay', url: 'http://karmadecay.com/' },
+      { name: 'Jeffreys Metadata Viewer', url: 'http://exif.regex.info/' },
+      { name: 'Metapicz', url: 'http://metapicz.com/' },
+      { name: 'Photobucket', url: 'http://photobucket.com/' },
+      // NEW
+      { name: 'Search4Faces', url: 'https://search4faces.com/', badge: 'new' },
+      { name: 'FaceCheck.ID', url: 'https://facecheck.id/', badge: 'new' },
+      { name: 'Bing Visual Search', url: 'https://www.bing.com/images/feed', badge: 'new' },
+      { name: 'Exifdata.com', url: 'https://www.exifdata.com/', badge: 'new' },
+      { name: 'ImgInn (Instagram archive)', url: 'https://imginn.com/', badge: 'new' },
+    ]
+  },
+
+  // ── VIDEO ─────────────────────────────────────────────────
+  {
+    id: 'video', title: 'Video Intelligence', icon: '🎥', filter: 'image',
+    tools: [
+      { name: 'YouTube', url: 'https://www.youtube.com/' },
+      { name: 'YouTube Data Viewer', url: 'https://www.amnestyusa.org/citizenevidence' },
+      { name: 'Vimeo', url: 'https://vimeo.com/' },
+      { name: 'DailyMotion', url: 'http://www.dailymotion.com/' },
+      { name: 'Earthcam', url: 'http://www.earthcam.com/' },
+      { name: 'Archive Open Source Videos', url: 'https://archive.org/details/opensource_movies' },
+      { name: 'Yahoo Video Search', url: 'http://video.search.yahoo.com/' },
+      { name: 'Bing Video', url: 'http://www.bing.com/?scope=video' },
+      // NEW
+      { name: 'InVID / WeVerify', url: 'https://www.invid-project.eu/tools-and-services/invid-verification-plugin/', badge: 'new' },
+      { name: 'YouTube Geofind', url: 'https://mattw.io/youtube-geofind/', badge: 'new' },
+      { name: 'Montage (YouTube geo)', url: 'https://montage.meedan.com/', badge: 'new' },
+    ]
+  },
+
+  // ── SEARCH ENGINES ───────────────────────────────────────
+  {
+    id: 'search', title: 'Search Engines', icon: '🔍', filter: 'all',
+    tools: [
+      { name: 'Google', url: 'http://www.google.com/' },
+      { name: 'Bing', url: 'http://www.bing.com/' },
+      { name: 'DuckDuckGo', url: 'https://duckduckgo.com/' },
+      { name: 'Yahoo', url: 'http://www.yahoo.com/' },
+      { name: 'Wolfram Alpha', url: 'http://www.wolframalpha.com/' },
+      { name: 'Ahrefs', url: 'https://ahrefs.com/' },
+      { name: 'Ask', url: 'http://www.ask.com/' },
+      { name: 'Advangle', url: 'http://advangle.com/' },
+      { name: 'Impersonal.me', url: 'http://www.impersonal.me/' },
+      // NEW
+      { name: 'Carrot2', url: 'https://search.carrot2.org/', badge: 'new' },
+      { name: 'Startpage', url: 'https://www.startpage.com/', badge: 'new' },
+      { name: 'Brave Search', url: 'https://search.brave.com/', badge: 'new' },
+      { name: 'Yandex', url: 'https://yandex.com/', badge: 'new' },
+      { name: 'Baidu', url: 'https://www.baidu.com/', badge: 'new' },
+    ]
+  },
+
+  // ── DARK WEB / LEAKS ─────────────────────────────────────
+  {
+    id: 'darkweb', title: 'Dark Web & Data Leaks', icon: '🕳️', filter: 'darkweb',
+    tools: [
+      { name: 'Intelx.io', url: 'https://intelx.io/' },
+      { name: 'Dehashed', url: 'https://dehashed.com/' },
+      { name: 'Have I Been Pwned', url: 'https://haveibeenpwned.com/' },
+      // NEW
+      { name: 'DarkSearch.io', url: 'https://darksearch.io/', badge: 'new' },
+      { name: 'Ahmia (Tor Search)', url: 'https://ahmia.fi/', badge: 'new' },
+      { name: 'Torch (Tor Search)', url: 'http://xmh57jrknzkhv6y3ls3ubitzfqnkrwxhopf5ayieonly7b7xbziystad.onion/', badge: 'new' },
+      { name: 'BreachForums Monitor', url: 'https://breachforums.is/', badge: 'new' },
+      { name: 'Leak-Lookup', url: 'https://leak-lookup.com/', badge: 'new' },
+      { name: 'SnusBase', url: 'https://snusbase.com/', badge: 'new' },
+    ]
+  },
+
+  // ── GEOINT ───────────────────────────────────────────────
+  {
+    id: 'geoint', title: 'Geolocation & Mapping', icon: '🗺️', filter: 'geoint',
+    tools: [
+      // NEW - entire category
+      { name: 'Google Maps', url: 'https://maps.google.com/', badge: 'new' },
+      { name: 'Google Earth', url: 'https://earth.google.com/', badge: 'new' },
+      { name: 'Mapillary', url: 'https://www.mapillary.com/', badge: 'new' },
+      { name: 'OpenStreetMap', url: 'https://www.openstreetmap.org/', badge: 'new' },
+      { name: 'Wikimapia', url: 'http://wikimapia.org/', badge: 'new' },
+      { name: 'GeoHack', url: 'https://geohack.toolforge.org/', badge: 'new' },
+      { name: 'SunCalc (shadow analysis)', url: 'https://www.suncalc.org/', badge: 'new' },
+      { name: 'Sentinel Hub EO Browser', url: 'https://apps.sentinel-hub.com/eo-browser/', badge: 'new' },
+      { name: 'NASA Worldview', url: 'https://worldview.earthdata.nasa.gov/', badge: 'new' },
+      { name: 'OSINT Combine Map Search', url: 'https://www.osintcombine.com/social-media-location-search', badge: 'new' },
+      { name: 'Pic2Map (GPS from photo)', url: 'https://www.pic2map.com/', badge: 'new' },
+      { name: 'GeoSpy AI', url: 'https://geospy.ai/', badge: 'new' },
+    ]
+  },
+
+  // ── THREAT INTELLIGENCE ───────────────────────────────────
+  {
+    id: 'threat', title: 'Threat Intelligence', icon: '🛡️', filter: 'threat',
+    tools: [
+      { name: 'VirusTotal', url: 'https://www.virustotal.com/', badge: 'new' },
+      { name: 'URLScan.io', url: 'https://urlscan.io/', badge: 'new' },
+      { name: 'AbuseIPDB', url: 'https://www.abuseipdb.com/', badge: 'new' },
+      { name: 'AlienVault OTX', url: 'https://otx.alienvault.com/', badge: 'new' },
+      { name: 'Threatcrowd', url: 'https://www.threatcrowd.org/', badge: 'new' },
+      { name: 'IBM X-Force Exchange', url: 'https://exchange.xforce.ibmcloud.com/', badge: 'new' },
+      { name: 'Pulsedive', url: 'https://pulsedive.com/', badge: 'new' },
+      { name: 'Talos Intelligence', url: 'https://talosintelligence.com/', badge: 'new' },
+      { name: 'Malware Bazaar', url: 'https://bazaar.abuse.ch/', badge: 'new' },
+      { name: 'Shodan (IoT Threat)', url: 'https://shodan.io/', badge: 'new' },
+    ]
+  },
+
+  // ── OSINT FRAMEWORKS ─────────────────────────────────────
+  {
+    id: 'frameworks', title: 'OSINT Frameworks & Collections', icon: '📚', filter: 'all',
+    tools: [
+      { name: 'OSINT.industries', url: 'https://osint.industries/' },
+      { name: 'Epieos', url: 'https://epieos.com/' },
+      { name: 'Intel Techniques Tools', url: 'https://inteltechniques.com/tools/' },
+      { name: 'OhShint!', url: 'https://github.com/OhShINT' },
+      { name: 'Awesome OSINT (GitHub)', url: 'https://github.com/jivoi/awesome-osint' },
+      // NEW
+      { name: 'OSINT Framework', url: 'https://osintframework.com/', badge: 'new' },
+      { name: 'Maltego', url: 'https://www.maltego.com/', badge: 'new' },
+      { name: 'Spiderfoot', url: 'https://www.spiderfoot.net/', badge: 'new' },
+      { name: 'Bellingcat Toolkit', url: 'https://bit.ly/bcattools', badge: 'new' },
+      { name: 'OSINT Combine', url: 'https://www.osintcombine.com/tools', badge: 'new' },
+      { name: 'Recon-ng', url: 'https://github.com/lanmaster53/recon-ng', badge: 'new' },
+      { name: 'theHarvester', url: 'https://github.com/laramies/theHarvester', badge: 'new' },
+      { name: 'Mitaka', url: 'https://github.com/ninoseki/mitaka', badge: 'new' },
+    ]
+  },
+
+  // ── DOCUMENT / METADATA ──────────────────────────────────
+  {
+    id: 'docs', title: 'Documents & Metadata', icon: '📄', filter: 'all',
+    tools: [
+      // NEW - entire category
+      { name: 'FOCA (metadata extractor)', url: 'https://github.com/ElevenPaths/FOCA', badge: 'new' },
+      { name: 'Metagoofil', url: 'https://github.com/laramies/metagoofil', badge: 'new' },
+      { name: 'Scribd', url: 'https://www.scribd.com/', badge: 'new' },
+      { name: 'DocFetcher', url: 'http://docfetcher.sourceforge.net/', badge: 'new' },
+      { name: 'Pastebin Search', url: 'https://pastebin.com/', badge: 'new' },
+      { name: 'Ghostbin', url: 'https://ghostbin.com/', badge: 'new' },
+      { name: 'Google Dorking Guide', url: 'https://www.sans.org/blog/google-hacking/', badge: 'new' },
+      { name: 'Exploit-DB Google Hacking DB', url: 'https://www.exploit-db.com/google-hacking-database', badge: 'new' },
+    ]
+  },
+
+  // ── CRYPTO / BLOCKCHAIN ──────────────────────────────────
+  {
+    id: 'crypto', title: 'Crypto & Blockchain', icon: '₿', filter: 'all',
+    tools: [
+      // NEW - entire category
+      { name: 'Blockchain Explorer', url: 'https://www.blockchain.com/explorer', badge: 'new' },
+      { name: 'Etherscan', url: 'https://etherscan.io/', badge: 'new' },
+      { name: 'Bitcoinwhoswho', url: 'https://bitcoinwhoswho.com/', badge: 'new' },
+      { name: 'Crystal Blockchain', url: 'https://crystalblockchain.com/', badge: 'new' },
+      { name: 'Chainalysis (free tools)', url: 'https://www.chainalysis.com/', badge: 'new' },
+      { name: 'TRM Labs', url: 'https://www.trmlabs.com/', badge: 'new' },
+      { name: 'WalletExplorer', url: 'https://www.walletexplorer.com/', badge: 'new' },
+    ]
+  },
+];
+
+// ── Build DOM ─────────────────────────────────────────────
+const main = document.getElementById('main');
+let totalTools = 0;
+let newTools = 0;
+
+DATA.forEach((cat, ci) => {
+  const card = document.createElement('div');
+  card.className = 'category';
+  card.dataset.filter = cat.filter;
+  card.dataset.id = cat.id;
+
+  const toolCount = cat.tools.length;
+  totalTools += toolCount;
+
+  let bodyHTML = '<div class="cat-body">';
+  let lastSub = null;
+  cat.tools.forEach(t => {
+    if (t.badge === 'new') newTools++;
+    if (t.sub && t.sub !== lastSub) {
+      bodyHTML += `<div class="subcat-label">— ${t.sub}</div>`;
+      lastSub = t.sub;
+    }
+    const badge = t.badge ? `<span class="badge ${t.badge}">${t.badge}</span>` : '';
+    bodyHTML += `<a class="tool-link" href="${t.url}" target="_blank" rel="noopener" data-name="${t.name.toLowerCase()}">
+      <span class="dot"></span>${t.name}${badge}
+    </a>`;
+  });
+  bodyHTML += '</div>';
+
+  card.innerHTML = `
+    <div class="cat-header">
+      <span class="cat-title">
+        <span class="cat-icon">${cat.icon}</span>
+        ${cat.title}
+      </span>
+      <span style="display:flex;align-items:center;gap:.5rem">
+        <span class="cat-count">${toolCount}</span>
+        <span class="cat-toggle">▾</span>
+      </span>
+    </div>
+    ${bodyHTML}
+  `;
+
+  card.querySelector('.cat-header').addEventListener('click', () => {
+    card.classList.toggle('collapsed');
+  });
+
+  main.appendChild(card);
+});
+
+document.getElementById('total-count').textContent = totalTools;
+document.getElementById('cat-count').textContent = DATA.length;
+document.getElementById('new-count').textContent = newTools;
+
+// ── Filter ────────────────────────────────────────────────
+const filterBtns = document.querySelectorAll('.filter-btn');
+let activeFilter = 'all';
+
+filterBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    applyFilters();
+  });
+});
+
+// ── Search ────────────────────────────────────────────────
+const searchInput = document.getElementById('search');
+searchInput.addEventListener('input', applyFilters);
+
+function applyFilters() {
+  const query = searchInput.value.toLowerCase().trim();
+  document.querySelectorAll('.category').forEach(card => {
+    const matchesFilter = activeFilter === 'all' || card.dataset.filter === activeFilter;
+    if (!matchesFilter) { card.classList.add('all-hidden'); return; }
+
+    const links = card.querySelectorAll('.tool-link');
+    let visibleCount = 0;
+    links.forEach(link => {
+      const matches = !query || link.dataset.name.includes(query);
+      link.classList.toggle('hidden', !matches);
+      if (matches) visibleCount++;
+    });
+    card.classList.toggle('all-hidden', visibleCount === 0);
+    if (query && visibleCount > 0) card.classList.remove('collapsed');
+  });
+}
+</script>
+</body>
+</html>
